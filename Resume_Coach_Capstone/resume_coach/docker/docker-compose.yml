@@ -1,0 +1,67 @@
+version: "3.8"
+
+services:
+  resume-coach:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: resume-coach:latest
+    container_name: resume-coach-app
+    ports:
+      - "8000:8000"   # FastAPI backend
+      - "8501:8501"   # Streamlit frontend
+    environment:
+      # ── Inference Backend ──
+      # Options: nebius | local_hf | sagemaker
+      - INFERENCE_BACKEND=${INFERENCE_BACKEND:-nebius}
+
+      # ── Nebius API ──
+      - NEBIUS_API_KEY=${NEBIUS_API_KEY}
+      - NEBIUS_MODEL=${NEBIUS_MODEL:-meta-llama/Meta-Llama-3.1-70B-Instruct}
+
+      # ── AWS ──
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_REGION=${AWS_REGION:-us-east-1}
+      - S3_BUCKET_NAME=${S3_BUCKET_NAME}
+
+      # ── SageMaker ──
+      - SAGEMAKER_ENDPOINT_NAME=${SAGEMAKER_ENDPOINT_NAME:-resume-coach-llama3-8b-endpoint}
+
+      # ── Local HF Model ──
+      - HF_LOCAL_MODEL_DIR=/opt/ml/models/mistral-7b
+      - HF_USE_4BIT=true
+
+      # ── App ──
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    volumes:
+      # Mount model directory from host (persist across container restarts)
+      - ${HF_LOCAL_MODEL_DIR:-./models}:/opt/ml/models/mistral-7b
+      # Mount source for live reload during development
+      # Comment out in production
+      - ../app:/app/app
+      - ../backend:/app/backend
+      - ../config:/app/config
+      - ../utils:/app/utils
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+
+  # Optional: Redis for session storage (replace in-memory dict)
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: resume-coach-redis
+  #   ports:
+  #     - "6379:6379"
+  #   restart: unless-stopped

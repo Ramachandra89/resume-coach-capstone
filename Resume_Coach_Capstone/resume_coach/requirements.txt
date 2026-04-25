@@ -1,0 +1,61 @@
+# ═══════════════════════════════════════════════════════
+# Resume Coach AI - Python Dependencies
+# ═══════════════════════════════════════════════════════
+
+# ── Web Framework ──
+fastapi==0.111.0
+uvicorn[standard]==0.30.1
+python-multipart==0.0.9
+pydantic==2.7.1
+
+# ── Streamlit Frontend ──
+streamlit==1.35.0
+
+# ── LangChain Core ──
+langchain==0.2.1
+langchain-core==0.2.3
+langchain-community==0.2.1
+langchain-openai==0.1.8       # Nebius uses OpenAI-compatible API
+langchain-aws==0.1.6           # SageMaker endpoint integration
+
+# ── AWS ──
+boto3==1.34.110
+botocore==1.34.110
+sagemaker==2.220.0
+
+# ── HuggingFace (local inference) ──
+transformers==4.41.1
+accelerate==0.30.1
+# bitsandbytes==0.43.1           # 4-bit quantization (Linux/CUDA only) - skip on Mac/Windows
+huggingface-hub==0.23.2
+tokenizers==0.19.1
+
+# ── Fine-Tuning ──
+peft==0.11.1                   # LoRA / QLoRA
+trl==0.8.6                     # SFTTrainer
+datasets==2.19.1
+
+# ── PDF Processing ──
+pdfminer.six==20221105         # Primary PDF text extractor
+pymupdf==1.24.3                # Fallback PDF extractor (fitz)
+pypdf==4.2.0                   # Second fallback
+reportlab==4.1.0               # PDF generation for optimized resume
+
+# ── NLP / Text Processing ──
+tiktoken==0.7.0                # Token counting
+
+# ── HTTP ──
+requests==2.32.2
+httpx==0.27.0
+
+# ── Utilities ──
+python-dotenv==1.0.1
+tenacity==8.3.0                # Retry logic for API calls
+numpy==1.26.4
+pandas==2.2.2
+
+# ── Process Management ──
+supervisor==4.2.5
+
+# ── Logging / Observability ──
+rich==13.7.1
