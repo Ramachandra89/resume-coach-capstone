@@ -23,27 +23,44 @@ logger = logging.getLogger(__name__)
 def _parse_json_response(response: str) -> dict:
     """
     Robustly parse JSON from LLM response.
-    Handles markdown code fences, trailing commas, and minor formatting issues.
+    Handles markdown code fences, trailing commas, truncated output, and extra text.
     """
     # Strip markdown code fences
     response = re.sub(r'```json\s*', '', response)
     response = re.sub(r'```\s*', '', response)
     response = response.strip()
 
-    # Find JSON object boundaries
+    # Find JSON object start
     start = response.find('{')
-    end = response.rfind('}')
-    if start != -1 and end != -1:
-        response = response[start:end+1]
+    if start == -1:
+        raise ValueError("No JSON object found in LLM response")
+    response = response[start:]
 
     # Remove trailing commas before } or ]
     response = re.sub(r',\s*([}\]])', r'\1', response)
 
+    # Try parsing as-is first
     try:
         return json.loads(response)
-    except json.JSONDecodeError as e:
-        logger.error(f"JSON parse failed: {e}\nRaw response:\n{response[:500]}")
-        raise ValueError(f"LLM returned invalid JSON: {e}")
+    except json.JSONDecodeError:
+        pass
+
+    # Response may be truncated — find the last complete } and try up to there
+    for end in range(len(response) - 1, -1, -1):
+        if response[end] == '}':
+            candidate = response[:end + 1]
+            # Balance open brackets by appending closing ones
+            open_braces = candidate.count('{') - candidate.count('}')
+            open_brackets = candidate.count('[') - candidate.count(']')
+            candidate += ']' * open_brackets + '}' * open_braces
+            candidate = re.sub(r',\s*([}\]])', r'\1', candidate)
+            try:
+                return json.loads(candidate)
+            except json.JSONDecodeError:
+                continue
+
+    logger.error(f"JSON parse failed after repair attempts.\nRaw response:\n{response[:500]}")
+    raise ValueError("LLM returned invalid JSON that could not be repaired")
 
 
 class CoachingReportChain:
@@ -63,7 +80,7 @@ class CoachingReportChain:
             COACHING_REPORT_PROMPT,
         )
 
-        self.llm_analytical = get_llm(backend=backend, temperature=0.2, max_tokens=2048)
+        self.llm_analytical = get_llm(backend=backend, temperature=0.2, max_tokens=4096)
         self.compression_chain = LLMChain(
             llm=self.llm_analytical,
             prompt=CONTEXT_COMPRESSION_PROMPT,
