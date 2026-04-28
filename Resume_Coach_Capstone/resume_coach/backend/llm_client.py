@@ -163,9 +163,9 @@ def _get_sagemaker_llm(endpoint_name, region, temperature, max_tokens):
                 }
                 return json.dumps(payload).encode("utf-8")
 
-            def transform_output(self, output: bytes) -> str:
-                # output is bytes — do not call .read()
-                response = json.loads(output.decode("utf-8"))
+            def transform_output(self, output) -> str:
+                # langchain_aws passes a StreamingBody object — must call .read() first
+                response = json.loads(output.read().decode("utf-8"))
                 if isinstance(response, list):
                     return response[0].get("generated_text", "")
                 return response.get("generated_text", str(response))
